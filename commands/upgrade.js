@@ -7,32 +7,45 @@ const {
   SlashCommandBuilder,
 } = require('discord.js');
 const economy = require('../services/economyService');
+const { syncZoneRoles } = require('../services/roleSync');
+const zonesConfig = require('../data/zones');
+const { zoneRoleName } = require('../utils/zoneRoles');
 const formatMoney = require('../utils/formatMoney');
 
+const roleWarning = failed =>
+  `⚠️ Не вдалося оновити ролі: ${failed.join(', ')}. ` +
+  'Перевір, що в бота є право «Керувати ролями» і його роль стоїть вище за ролі зон.';
+
 function createUpgradeView(player, userId, notice) {
+  const allMaxed = player.zones.every(zone => zone.isMaxLevel);
+
+  const lines = player.zones.map(zone => {
+    const progress = `рівень ${zone.level}/${zonesConfig.maxLevel}`;
+    if (zone.isMaxLevel) {
+      return `**${zone.name}** — ${progress} 🏆 MAX. Дохід: ${formatMoney(zone.hourlyIncome)}/год.`;
+    }
+    return `**${zone.name}** — ${progress}. Далі: ${formatMoney(zone.nextUpgradePrice)} ` +
+      `(дохід ${formatMoney(zone.hourlyIncome)} → ${formatMoney(zone.nextHourlyIncome)}/год).`;
+  });
+
   const embed = new EmbedBuilder()
     .setColor(0x00eeff)
     .setTitle('🔧 Прокачка зон')
     .setDescription(
-      `${notice ? `${notice}\n\n` : ''}Баланс: **${formatMoney(player.balance)}**\n` +
-      player.zones
-        .map(zone => {
-          return `**${zone.name}** — рівень ${zone.level}; наступний: ${zone.level + 1} за ` +
-            `${formatMoney(zone.nextUpgradePrice)}. Дохід: ${formatMoney(zone.hourlyIncome)} → ` +
-            `${formatMoney(zone.nextHourlyIncome)}/год.`;
-        })
-        .join('\n'),
+      `${notice ? `${notice}\n\n` : ''}Баланс: **${formatMoney(player.balance)}**\n\n` +
+      lines.join('\n') +
+      (allMaxed ? '\n\n🏆 Усі зони на максимальному рівні!' : ''),
     );
 
   const buttons = player.zones.map(zone =>
     new ButtonBuilder()
       .setCustomId(`zone-upgrade:${zone.zoneId}:${userId}`)
-      .setLabel(`${zone.name} · ${formatMoney(zone.nextUpgradePrice)}`)
-      .setStyle(ButtonStyle.Primary),
+      .setLabel(zone.isMaxLevel ? `${zone.name} · MAX` : `${zone.name} · ${formatMoney(zone.nextUpgradePrice)}`)
+      .setStyle(zone.isMaxLevel ? ButtonStyle.Secondary : ButtonStyle.Primary)
+      .setDisabled(zone.isMaxLevel),
   );
-  const row = new ActionRowBuilder().addComponents(buttons);
 
-  return { embeds: [embed], components: [row] };
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(buttons)] };
 }
 
 module.exports = {
@@ -58,10 +71,13 @@ module.exports = {
       return;
     }
 
-    await interaction.reply({
-      ...createUpgradeView(player, interaction.user.id),
-      flags: MessageFlags.Ephemeral,
-    });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    // Підстраховка: якщо ролі розійшлись із рівнями в базі (наприклад, роль зняли вручну), вирівнюємо
+    const roles = await syncZoneRoles(interaction.member, player.zones);
+    const notice = roles.failed.length > 0 ? roleWarning(roles.failed) : undefined;
+
+    await interaction.editReply(createUpgradeView(player, interaction.user.id, notice));
   },
 
   async handleButton(interaction) {
@@ -74,34 +90,52 @@ module.exports = {
       return;
     }
 
+    // Зміна ролей у Discord може тривати понад 3 секунди, тому одразу підтверджуємо натискання
+    await interaction.deferUpdate();
+
     const result = economy.upgradeZone(interaction.guildId, interaction.user.id, zoneId);
+
     if (result.status === 'not-registered') {
-      await interaction.reply({
+      await interaction.followUp({
         content: 'Спершу створи клуб командою `/start`.',
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
     if (result.status === 'zone-not-found') {
-      await interaction.reply({
+      await interaction.followUp({
         content: 'Цю зону не знайдено. Запусти `/upgrade` ще раз.',
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
-    if (result.status === 'insufficient-funds') {
-      await interaction.reply({
-        content: `Недостатньо коштів: потрібно ${formatMoney(result.price)}, у тебе ${formatMoney(result.balance)}.`,
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const player = economy.getPlayer(interaction.guildId, interaction.user.id);
-    await interaction.update(createUpgradeView(
-      player,
-      interaction.user.id,
-      `✅ Зону прокачано до рівня ${result.level} за ${formatMoney(result.price)}.`,
-    ));
+    const zone = zonesConfig.zones[zoneId];
+
+    if (result.status === 'max-level') {
+      await interaction.editReply(createUpgradeView(
+        player,
+        interaction.user.id,
+        `🏆 Зона «${zone.name}» уже на максимальному рівні.`,
+      ));
+      return;
+    }
+    if (result.status === 'insufficient-funds') {
+      await interaction.editReply(createUpgradeView(
+        player,
+        interaction.user.id,
+        `❌ Недостатньо коштів: потрібно ${formatMoney(result.price)}, у тебе ${formatMoney(result.balance)}.`,
+      ));
+      return;
+    }
+
+    // Гроші вже списано, тепер міняємо роль зони: «Бар Зона 1» → «Бар Зона 2»
+    const roles = await syncZoneRoles(interaction.member, player.zones);
+    let notice = `✅ «${zone.name}» прокачано до рівня ${result.level} за ${formatMoney(result.price)}. ` +
+      `Нова роль: **${zoneRoleName(zone, result.level)}**.`;
+    if (roles.failed.length > 0) notice += `\n${roleWarning(roles.failed)}`;
+
+    await interaction.editReply(createUpgradeView(player, interaction.user.id, notice));
   },
 };

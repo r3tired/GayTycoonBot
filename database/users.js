@@ -113,6 +113,9 @@ function upgradeZone(guildId, userId, zoneId, getUpgradePrice, getHourlyIncome, 
       WHERE guild_id = ? AND user_id = ? AND zone_id = ?
     `).get(guildId, userId, zoneId);
     if (!playerZone) return { status: 'zone-not-found' };
+    if (playerZone.level >= zonesConfig.maxLevel) {
+      return { status: 'max-level', level: playerZone.level };
+    }
 
     const zones = db.prepare(`
       SELECT zone_id AS zoneId, level FROM user_zones

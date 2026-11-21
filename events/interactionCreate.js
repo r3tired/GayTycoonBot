@@ -10,9 +10,9 @@ module.exports = {
       try {
         await command.handleButton(interaction);
       } catch (error) {
-        console.error('❌ Error handling zone upgrade:', error);
+        console.error('❌ Помилка прокачки зони:', error);
         const response = {
-          content: 'Failed to upgrade zone. Please try again later or contact an administrator.',
+          content: 'Не вдалося прокачати зону. Спробуй ще раз пізніше.',
           flags: MessageFlags.Ephemeral,
         };
         if (interaction.replied || interaction.deferred) {
@@ -32,10 +32,10 @@ module.exports = {
     try {
       await command.execute(interaction);
     } catch (error) {
-      console.error(`❌ Error executing /${interaction.commandName}:`, error);
+      console.error(`❌ Помилка виконання /${interaction.commandName}:`, error);
 
       const response = {
-        content: 'Failed to execute command. Please try again later or contact an administrator.',
+        content: 'Не вдалося виконати команду. Спробуй ще раз пізніше.',
         flags: MessageFlags.Ephemeral,
       };
 

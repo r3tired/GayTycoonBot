@@ -15,12 +15,14 @@ function getPlayer(guildId, userId) {
 
   const zones = player.zones.map(playerZone => {
     const config = zonesConfig.zones[playerZone.zoneId];
+    const isMaxLevel = playerZone.level >= zonesConfig.maxLevel;
     return {
       ...playerZone,
       name: config.name,
+      isMaxLevel,
       hourlyIncome: getHourlyIncome(config, playerZone.level),
-      nextHourlyIncome: getHourlyIncome(config, playerZone.level + 1),
-      nextUpgradePrice: getUpgradePrice(config, playerZone.level),
+      nextHourlyIncome: isMaxLevel ? null : getHourlyIncome(config, playerZone.level + 1),
+      nextUpgradePrice: isMaxLevel ? null : getUpgradePrice(config, playerZone.level),
     };
   });
 

@@ -1,5 +1,7 @@
 const { EmbedBuilder, MessageFlags, SlashCommandBuilder } = require('discord.js');
 const economy = require('../services/economyService');
+const { syncZoneRoles } = require('../services/roleSync');
+const zonesConfig = require('../data/zones');
 const formatMoney = require('../utils/formatMoney');
 
 module.exports = {
@@ -25,6 +27,9 @@ module.exports = {
       return;
     }
 
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await syncZoneRoles(interaction.member, player.zones);
+
     const embed = new EmbedBuilder()
       .setColor(0x00eeff)
       .setTitle(`🏰 Клуб ${interaction.user.username}`)
@@ -35,7 +40,7 @@ module.exports = {
         {
           name: '🎭 Зони',
           value: player.zones
-            .map(zone => `**${zone.name}** — рівень ${zone.level} (${formatMoney(zone.hourlyIncome)}/год)`)
+            .map(zone => `**${zone.name}** — рівень ${zone.level}/${zonesConfig.maxLevel} (${formatMoney(zone.hourlyIncome)}/год)`)
             .join('\n'),
         },
         {
@@ -46,6 +51,6 @@ module.exports = {
       )
       .setFooter({ text: 'Gay Tycoon' });
 
-    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [embed] });
   },
 };

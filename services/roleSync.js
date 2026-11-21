@@ -1,4 +1,6 @@
 const rolesConfig = require('../data/roles');
+const zonesConfig = require('../data/zones');
+const { zoneRoleName } = require('../utils/zoneRoles');
 
 // Створює відсутні ролі та оновлює ті, що відрізняються від конфігу
 async function syncRoles(guild) {
@@ -114,4 +116,51 @@ async function getMemberRolesFromOtherGroups(member, group) {
     .map(cfg => cfg.name);
 }
 
-module.exports = { syncRoles, giveRole, giveGroupRoles, getMemberRolesFromOtherGroups };
+
+// Робить так, щоб у гравця для кожної зони була рівно одна роль: поточного рівня.
+// playerZones: [{ zoneId, level }]. Нічого не викликає в Discord, якщо ролі вже правильні.
+async function syncZoneRoles(member, playerZones) {
+  const result = { changed: [], failed: [] };
+  let roles = [...member.guild.roles.cache.values()];
+
+  const findRole = async name => {
+    let role = roles.find(candidate => candidate.name === name);
+    if (!role) {
+      roles = [...(await member.guild.roles.fetch()).values()];
+      role = roles.find(candidate => candidate.name === name);
+    }
+    return role;
+  };
+
+  for (const { zoneId, level } of playerZones) {
+    const zone = zonesConfig.zones[zoneId];
+    if (!zone) continue;
+
+    const targetName = zoneRoleName(zone, level);
+    try {
+      const target = await findRole(targetName);
+      if (!target) throw new Error(`Роль "${targetName}" ще не створена`);
+
+      const toRemove = [];
+      for (let other = 1; other <= zonesConfig.maxLevel; other++) {
+        if (other === level) continue;
+        const role = roles.find(candidate => candidate.name === zoneRoleName(zone, other));
+        if (role && member.roles.cache.has(role.id)) toRemove.push(role);
+      }
+      const needsAdd = !member.roles.cache.has(target.id);
+      if (!needsAdd && toRemove.length === 0) continue;
+
+      // Спочатку видаємо нову роль, потім знімаємо стару: гравець не лишається без ролі
+      if (needsAdd) await member.roles.add(target, `Рівень зони: ${targetName}`);
+      if (toRemove.length > 0) await member.roles.remove(toRemove, `Заміна ролі на ${targetName}`);
+      result.changed.push(targetName);
+    } catch (error) {
+      console.error(`Не вдалося оновити роль ${targetName}:`, error);
+      result.failed.push(targetName);
+    }
+  }
+
+  return result;
+}
+
+module.exports = { syncZoneRoles, syncRoles, giveRole, giveGroupRoles, getMemberRolesFromOtherGroups };

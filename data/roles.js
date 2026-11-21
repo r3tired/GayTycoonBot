@@ -1,4 +1,10 @@
-module.exports = {
+const zonesConfig = require('./zones');
+const { zoneRoleName } = require('../utils/zoneRoles');
+
+// Ролі зон генеруються з data/zones.js: для кожної зони по maxLevel ролей.
+// Рівень 1 входить у групу beginner (видається через /start),
+// вищі рівні (2, 3...) у групу zone: їх бот видає при прокачці.
+const roles = {
   GayClub: {
     name: 'Гей Клуб',
     color: '#00eeff',
@@ -7,41 +13,21 @@ module.exports = {
     description: 'Gay Club Tycoon Player',
     group: 'beginner',
   },
-
-  StripZone1lvl: {
-    name: 'Стриптиз Зона 1',
-    color: '#00eeff',
-    hoist: false,
-    mentionable: true,
-    description: 'Strip Zone 1 lvl',
-    group: 'beginner',
-  },
-
-  BarZone1lvl: {
-    name: 'Бар Зона 1',
-    color: '#00eeff',
-    hoist: false,
-    mentionable: true,
-    description: 'Bar Zone 1 lvl',
-    group: 'beginner',
-  },
-
-  VipZone1lvl: {
-    name: 'VIP Зона 1',
-    color: '#00eeff',
-    hoist: false,
-    mentionable: true,
-    description: 'VIP Zone 1 lvl',
-    group: 'beginner',
-  },
-
-  ChillZone1lvl: {
-    name: 'Чіл Зона 1',
-    color: '#00eeff',
-    hoist: false,
-    mentionable: true,
-    description: 'Chill Zone 1 lvl',
-    group: 'beginner',
-  },
-
 };
+
+for (const [zoneId, zone] of Object.entries(zonesConfig.zones)) {
+  for (let level = 1; level <= zonesConfig.maxLevel; level++) {
+    roles[`${zoneId}_${level}`] = {
+      name: zoneRoleName(zone, level),
+      color: zone.color,
+      hoist: false,
+      mentionable: true,
+      description: `${zone.name} zone, level ${level}`,
+      group: level === zonesConfig.startingLevel ? 'beginner' : 'zone',
+      zoneId,
+      level,
+    };
+  }
+}
+
+module.exports = roles;
