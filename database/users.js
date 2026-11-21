@@ -60,6 +60,8 @@ function setClubName(guildId, userId, clubName) {
 function getPlayer(guildId, userId) {
   const user = db.prepare(`
     SELECT guild_id AS guildId, user_id AS userId, balance, club_name AS clubName,
+           regular_guests AS regularGuests, medium_guests AS mediumGuests,
+           rich_guests AS richGuests,
            last_collected_at AS lastCollectedAt, registered_at AS registeredAt
     FROM users
     WHERE guild_id = ? AND user_id = ?
@@ -96,42 +98,58 @@ async function runStartOnce(guildId, userId, operation, clubName = null) {
   }
 }
 
-function collectIncome(guildId, userId, getHourlyIncome, now = Date.now()) {
+function settleCollection(player, guildId, userId, processCollection, maxCollectionMs, now) {
+  const collectedAt = Math.max(now, player.lastCollectedAt);
+  const elapsedMs = Math.min(collectedAt - player.lastCollectedAt, maxCollectionMs);
+  const collection = processCollection(player.zones, elapsedMs);
+
+  db.prepare(`
+    UPDATE users
+    SET balance = balance + ?,
+        last_collected_at = ?,
+        regular_guests = regular_guests + ?,
+        medium_guests = medium_guests + ?,
+        rich_guests = rich_guests + ?
+    WHERE guild_id = ? AND user_id = ?
+  `).run(
+    collection.earned,
+    collectedAt,
+    collection.regularGuests,
+    collection.mediumGuests,
+    collection.richGuests,
+    guildId,
+    userId,
+  );
+
+  return {
+    ...collection,
+    elapsedMs,
+    balance: player.balance + collection.earned,
+  };
+}
+
+function collectIncome(guildId, userId, processCollection, maxCollectionMs, now = Date.now()) {
   const collectTransaction = db.transaction(() => {
     const player = getPlayer(guildId, userId);
     if (!player) return null;
 
-    const hourlyIncome = player.zones.reduce((total, playerZone) => {
-      const zone = zonesConfig.zones[playerZone.zoneId];
-      return total + getHourlyIncome(zone, playerZone.level);
-    }, 0);
-    const collectedAt = Math.max(now, player.lastCollectedAt);
-    const elapsedMs = collectedAt - player.lastCollectedAt;
-    const earned = hourlyIncome * elapsedMs / 3_600_000;
-
-    db.prepare(`
-      UPDATE users
-      SET balance = balance + ?, last_collected_at = ?
-      WHERE guild_id = ? AND user_id = ?
-    `).run(earned, collectedAt, guildId, userId);
-
-    return {
-      earned,
-      hourlyIncome,
-      elapsedMs,
-      balance: player.balance + earned,
-    };
+    return settleCollection(player, guildId, userId, processCollection, maxCollectionMs, now);
   });
 
   return collectTransaction();
 }
 
-function upgradeZone(guildId, userId, zoneId, getUpgradePrice, getHourlyIncome, now = Date.now()) {
+function upgradeZone(
+  guildId,
+  userId,
+  zoneId,
+  getUpgradePrice,
+  processCollection,
+  maxCollectionMs,
+  now = Date.now(),
+) {
   const upgradeTransaction = db.transaction(() => {
-    const player = db.prepare(`
-      SELECT balance, last_collected_at AS lastCollectedAt
-      FROM users WHERE guild_id = ? AND user_id = ?
-    `).get(guildId, userId);
+    const player = getPlayer(guildId, userId);
     if (!player) return { status: 'not-registered' };
 
     const playerZone = db.prepare(`
@@ -143,24 +161,18 @@ function upgradeZone(guildId, userId, zoneId, getUpgradePrice, getHourlyIncome, 
       return { status: 'max-level', level: playerZone.level };
     }
 
-    const zones = db.prepare(`
-      SELECT zone_id AS zoneId, level FROM user_zones
-      WHERE guild_id = ? AND user_id = ?
-    `).all(guildId, userId);
-    const hourlyIncome = zones.reduce((total, zone) => {
-      return total + getHourlyIncome(zonesConfig.zones[zone.zoneId], zone.level);
-    }, 0);
-    const collectedAt = Math.max(now, player.lastCollectedAt);
-    const earned = hourlyIncome * (collectedAt - player.lastCollectedAt) / 3_600_000;
-    const balance = player.balance + earned;
-    db.prepare(`
-      UPDATE users SET balance = ?, last_collected_at = ?
-      WHERE guild_id = ? AND user_id = ?
-    `).run(balance, collectedAt, guildId, userId);
+    const collection = settleCollection(
+      player,
+      guildId,
+      userId,
+      processCollection,
+      maxCollectionMs,
+      now,
+    );
 
     const price = getUpgradePrice(playerZone.level);
-    if (balance < price) {
-      return { status: 'insufficient-funds', balance, price };
+    if (collection.balance < price) {
+      return { ...collection, status: 'insufficient-funds', price };
     }
 
     db.prepare(`
@@ -173,10 +185,11 @@ function upgradeZone(guildId, userId, zoneId, getUpgradePrice, getHourlyIncome, 
     `).run(guildId, userId, zoneId);
 
     return {
+      ...collection,
       status: 'upgraded',
       level: playerZone.level + 1,
       price,
-      balance: balance - price,
+      balance: collection.balance - price,
     };
   });
 

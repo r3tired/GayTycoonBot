@@ -11,6 +11,7 @@ const { syncZoneRoles } = require('../services/roleSync');
 const zonesConfig = require('../data/zones');
 const { zoneRoleName } = require('../utils/zoneRoles');
 const formatMoney = require('../utils/formatMoney');
+const formatCount = require('../utils/formatCount');
 
 const roleWarning = failed =>
   `⚠️ Не вдалося оновити ролі: ${failed.join(', ')}. ` +
@@ -22,10 +23,11 @@ function createUpgradeView(player, userId, notice) {
   const lines = player.zones.map(zone => {
     const progress = `рівень ${zone.level}/${zonesConfig.maxLevel}`;
     if (zone.isMaxLevel) {
-      return `**${zone.name}** — ${progress} 🏆 MAX. Дохід: ${formatMoney(zone.hourlyIncome)}/год.`;
+      return `**${zone.name}** — ${progress} 🏆 MAX. Відвідуваність: ${formatCount(zone.visitorsPerHour)} гостей/год.`;
     }
     return `**${zone.name}** — ${progress}. Далі: ${formatMoney(zone.nextUpgradePrice)} ` +
-      `(дохід ${formatMoney(zone.hourlyIncome)} → ${formatMoney(zone.nextHourlyIncome)}/год).`;
+      `(відвідуваність ${formatCount(zone.visitorsPerHour)} → ` +
+      `${formatCount(zone.nextVisitorsPerHour)} гостей/год).`;
   });
 
   const embed = new EmbedBuilder()
@@ -122,10 +124,14 @@ module.exports = {
       return;
     }
     if (result.status === 'insufficient-funds') {
+      const collectionNotice = result.totalGuests > 0
+        ? ` За цей час прийшло ${formatCount(result.totalGuests)} гостей і зароблено ${formatMoney(result.earned)}.`
+        : '';
       await interaction.editReply(createUpgradeView(
         player,
         interaction.user.id,
-        `❌ Недостатньо коштів: потрібно ${formatMoney(result.price)}, у тебе ${formatMoney(result.balance)}.`,
+        `❌ Недостатньо коштів: потрібно ${formatMoney(result.price)}, у тебе ${formatMoney(result.balance)}.` +
+        collectionNotice,
       ));
       return;
     }
@@ -134,6 +140,9 @@ module.exports = {
     const roles = await syncZoneRoles(interaction.member, player.zones);
     let notice = `✅ «${zone.name}» прокачано до рівня ${result.level} за ${formatMoney(result.price)}. ` +
       `Нова роль: **${zoneRoleName(zone, result.level)}**.`;
+    if (result.totalGuests > 0) {
+      notice += `\nЗа цей час прийшло ${formatCount(result.totalGuests)} гостей і зароблено ${formatMoney(result.earned)}.`;
+    }
     if (roles.failed.length > 0) notice += `\n${roleWarning(roles.failed)}`;
 
     await interaction.editReply(createUpgradeView(player, interaction.user.id, notice));

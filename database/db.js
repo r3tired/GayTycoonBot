@@ -5,6 +5,7 @@ const db = new Database(path.join(__dirname, 'game.sqlite'));
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+db.pragma('busy_timeout = 5000');
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     guild_id TEXT NOT NULL,
@@ -12,6 +13,9 @@ db.exec(`
     balance REAL NOT NULL CHECK (balance >= 0),
     last_collected_at INTEGER NOT NULL,
     registered_at INTEGER NOT NULL,
+    regular_guests INTEGER NOT NULL DEFAULT 0 CHECK (regular_guests >= 0),
+    medium_guests INTEGER NOT NULL DEFAULT 0 CHECK (medium_guests >= 0),
+    rich_guests INTEGER NOT NULL DEFAULT 0 CHECK (rich_guests >= 0),
     PRIMARY KEY (guild_id, user_id)
   );
 
@@ -27,8 +31,16 @@ db.exec(`
   );
 `);
 
-// Міграція для баз, створених до появи назв клубів
 const userColumns = db.prepare('PRAGMA table_info(users)').all().map(column => column.name);
+if (!userColumns.includes('regular_guests')) {
+  db.exec('ALTER TABLE users ADD COLUMN regular_guests INTEGER NOT NULL DEFAULT 0 CHECK (regular_guests >= 0)');
+}
+if (!userColumns.includes('medium_guests')) {
+  db.exec('ALTER TABLE users ADD COLUMN medium_guests INTEGER NOT NULL DEFAULT 0 CHECK (medium_guests >= 0)');
+}
+if (!userColumns.includes('rich_guests')) {
+  db.exec('ALTER TABLE users ADD COLUMN rich_guests INTEGER NOT NULL DEFAULT 0 CHECK (rich_guests >= 0)');
+}
 if (!userColumns.includes('club_name')) db.exec('ALTER TABLE users ADD COLUMN club_name TEXT');
 if (!userColumns.includes('club_name_key')) db.exec('ALTER TABLE users ADD COLUMN club_name_key TEXT');
 db.exec(`

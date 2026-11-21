@@ -3,6 +3,7 @@ const economy = require('../services/economyService');
 const { syncZoneRoles } = require('../services/roleSync');
 const zonesConfig = require('../data/zones');
 const formatMoney = require('../utils/formatMoney');
+const formatCount = require('../utils/formatCount');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -36,11 +37,20 @@ module.exports = {
       .setThumbnail(interaction.user.displayAvatarURL())
       .addFields(
         { name: '💵 Баланс', value: formatMoney(player.balance), inline: true },
-        { name: '📈 Дохід на годину', value: formatMoney(player.hourlyIncome), inline: true },
+        {
+          name: '👥 Відвідуваність',
+          value: `${formatCount(player.visitorsPerHour)} гостей/год`,
+          inline: true,
+        },
+        {
+          name: '📊 Усього гостей',
+          value: `${formatCount(player.totalGuests)}\n💎 Багатих: ${formatCount(player.richGuests)}`,
+          inline: true,
+        },
         {
           name: '🎭 Зони',
           value: player.zones
-            .map(zone => `**${zone.name}** — рівень ${zone.level}/${zonesConfig.maxLevel} (${formatMoney(zone.hourlyIncome)}/год)`)
+            .map(zone => `**${zone.name}** — рівень ${zone.level}/${zonesConfig.maxLevel} (${formatCount(zone.visitorsPerHour)} гостей/год)`)
             .join('\n'),
         },
         {
