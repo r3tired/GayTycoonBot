@@ -27,16 +27,13 @@ test('назва клубу зберігається й унікальна на 
   assert.equal(claim.status, 'completed');
   assert.equal(users.getPlayer(guildA, 'u1').clubName, 'Рожевий Єдиноріг');
 
-  // та сама назва в іншому регістрі на тому ж сервері заборонена
   const duplicate = await users.runStartOnce(guildA, 'u2', async () => ({ completed: true }), 'рожевий єдиноріг');
   assert.equal(duplicate.status, 'name-taken');
   assert.equal(users.getPlayer(guildA, 'u2'), null, 'гравця з зайнятою назвою не створено');
 
-  // на іншому сервері можна
   const other = await users.runStartOnce(guildB, 'u2', async () => ({ completed: true }), 'Рожевий Єдиноріг');
   assert.equal(other.status, 'completed');
 
-  // перейменування: власну назву в іншому регістрі можна, чужу ні
   assert.equal(users.setClubName(guildA, 'u1', 'РОЖЕВИЙ ЄДИНОРІГ').status, 'ok');
   await users.runStartOnce(guildA, 'u3', async () => ({ completed: true }), 'Нічна Зміна');
   assert.equal(users.setClubName(guildA, 'u3', 'рожевий єдиноріг').status, 'name-taken');
