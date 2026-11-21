@@ -1,7 +1,5 @@
 const CLUB_NAME_MIN = 3;
 const CLUB_NAME_MAX = 32;
-
-// Ключ для порівняння назв без урахування регістру (працює і для кирилиці)
 function clubNameKey(name) {
   return name.toLocaleLowerCase('uk');
 }
