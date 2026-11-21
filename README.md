@@ -1,3 +1,23 @@
 # GayTycoonBot
 
-<img width="496" height="497" alt="Log in to Foursquare" src="https://github.com/user-attachments/assets/da262b63-e191-4a28-82fb-ac870a264292" />
+## Запуск
+
+1. `npm install`
+2. Впиши токен бота в `bot.env` у змінну `BOTTOKEN`.
+3. Дай боту право **Manage Roles** і підніми його роль вище ігрових ролей.
+4. Запусти: `npm start` (або `npm run dev` з автоперезапуском).
+
+Бот реєструє slash-команди, синхронізує ролі з `data/roles.js` і за командою `/start`
+видає ролі групи `beginner`. Зупинити бота: `Ctrl+C`.
+
+Команду `/start` можна успішно використати лише один раз на гравця на сервері.
+Факт використання зберігається у `database/startClaims.json`. Якщо в конфігурації
+ролей гравець має роль з групи, відмінної від `beginner`, стартова група не видається.
+
+## Логи
+
+Усе, що бот виводить, і всі помилки (разом з аварійним завершенням) пишуться у `logs/bot.log`.
+
+- Прочитати в терміналі: `npm run logs` (останні 50 рядків), `npm run logs -- 200`, `npm run logs -- errors`
+- Прочитати в Discord: `/logs` (лише для власника, ID береться з `CREATORID` у `bot.env`)
+- Файл можна відкрити й вручну: `logs/bot.log`

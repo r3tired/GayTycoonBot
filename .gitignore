@@ -1,0 +1,4 @@
+bot.env
+node_modules/
+logs/
+database/startClaims.json

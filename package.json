@@ -1,0 +1,27 @@
+{
+  "name": "gaytycoonbot",
+  "version": "1.0.0",
+  "description": "Discord-бот: мем-гра тайкон про гей-клуб",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "logs": "node scripts/readLogs.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/r3tired/GayTycoonBot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/r3tired/GayTycoonBot/issues"
+  },
+  "homepage": "https://github.com/r3tired/GayTycoonBot#readme",
+  "dependencies": {
+    "discord.js": "^14.28.1",
+    "dotenv": "^18.0.10"
+  }
+}
