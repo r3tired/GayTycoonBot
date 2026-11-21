@@ -13,7 +13,7 @@ process.on('unhandledRejection', reason => {
   logger.error('❌ UNHANDLED PROMISE REJECTION (unhandledRejection):', reason);
 });
 
-logger.info('=== Запуск бота ===');
+logger.info('=== Bot startup ===');
 
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 
@@ -21,7 +21,7 @@ require('dotenv').config({ path: path.join(__dirname, 'bot.env'), quiet: true })
 
 const token = process.env.BOTTOKEN;
 if (!token || token.startsWith('вставте')) {
-  throw new Error('❌ У bot.env не задано справжній BOTTOKEN');
+  throw new Error('BOTTOKEN is not configured in bot.env');
 }
 
 const client = new Client({
@@ -41,15 +41,18 @@ function loadCommands(dir) {
       loadCommands(fullPath);
     } else if (entry.name.endsWith('.js')) {
       try {
-        const command = require(fullPath);
-        if ('data' in command && 'execute' in command) {
-          client.commands.set(command.data.name, command);
-          logger.info(`❌ Завантажено команду: /${command.data.name}`);
-        } else {
-          logger.warn(`❌ Файл ${entry.name} без data/execute, пропущено`);
+        const loaded = require(fullPath);
+        const commands = Array.isArray(loaded) ? loaded : [loaded];
+        for (const command of commands) {
+          if (command && typeof command === 'object' && 'data' in command && 'execute' in command) {
+            client.commands.set(command.data.name, command);
+            logger.info(`Loaded command: /${command.data.name}`);
+          } else {
+            logger.warn(`Command file ${entry.name} is missing data/execute and was skipped`);
+          }
         }
       } catch (error) {
-        logger.error(`❌ Не вдалося завантажити команду ${entry.name}:`, error);
+        logger.error(`Failed to load command ${entry.name}:`, error);
       }
     }
   }
@@ -69,13 +72,13 @@ for (const file of fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'
       }
     };
     client[event.once ? 'once' : 'on'](event.name, handler);
-    logger.info(`❌ Завантажено подію: ${event.name}`);
+    logger.info(`Loaded event: ${event.name}`);
   } catch (error) {
-    logger.error(`Не вдалося завантажити подію ${file}:`, error);
+    logger.error(`Failed to load event ${file}:`, error);
   }
 }
 
 client.login(token).catch(error => {
-  logger.error('Не вдалося увійти в Discord (перевір токен):', error);
+  logger.error('Failed to log in to Discord (check the bot token):', error);
   process.exit(1);
 });

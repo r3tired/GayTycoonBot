@@ -7,7 +7,7 @@
     "start": "node index.js",
     "dev": "node --watch index.js",
     "logs": "node scripts/readLogs.js",
-    "test": "node --test"
+    "test": "node --test --test-concurrency=1"
   },
   "repository": {
     "type": "git",

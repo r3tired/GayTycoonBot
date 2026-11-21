@@ -10,9 +10,9 @@ module.exports = {
       try {
         await command.handleButton(interaction);
       } catch (error) {
-        console.error('❌ Помилка прокачки зони:', error);
+        console.error('Zone upgrade failed:', error);
         const response = {
-          content: 'Не вдалося прокачати зону. Спробуй ще раз пізніше.',
+          content: 'Не удалось улучшить зону. Попробуй позже.',
           flags: MessageFlags.Ephemeral,
         };
         if (interaction.replied || interaction.deferred) {
@@ -31,9 +31,9 @@ module.exports = {
       try {
         await command.handleImageChoice(interaction);
       } catch (error) {
-        console.error('❌ Помилка вибору зображення клубу:', error);
+        console.error('Club image selection failed:', error);
         const response = {
-          content: 'Не вдалося вибрати зображення клубу. Запусти `/start` ще раз.',
+          content: 'Не удалось выбрать изображение клуба. Запусти `/start` ещё раз.',
           flags: MessageFlags.Ephemeral,
         };
         if (interaction.replied || interaction.deferred) {
@@ -56,9 +56,9 @@ module.exports = {
       try {
         await command.handleModal(interaction);
       } catch (error) {
-        console.error(`❌ Помилка модального вікна ${interaction.customId}:`, error);
+        console.error(`Modal submission failed for ${interaction.customId}:`, error);
         const response = {
-          content: 'Не вдалося обробити форму. Спробуй ще раз пізніше.',
+          content: 'Не удалось обработать форму. Попробуй позже.',
           flags: MessageFlags.Ephemeral,
         };
         if (interaction.replied || interaction.deferred) {
@@ -78,10 +78,10 @@ module.exports = {
     try {
       await command.execute(interaction);
     } catch (error) {
-      console.error(`❌ Помилка виконання /${interaction.commandName}:`, error);
+      console.error(`Command execution failed for /${interaction.commandName}:`, error);
 
       const response = {
-        content: 'Не вдалося виконати команду. Спробуй ще раз пізніше.',
+        content: 'Не удалось выполнить команду. Попробуй позже.',
         flags: MessageFlags.Ephemeral,
       };
 

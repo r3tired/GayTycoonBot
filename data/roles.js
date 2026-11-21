@@ -10,7 +10,7 @@ const roles = {
     color: '#00eeff',
     hoist: false,
     mentionable: true,
-    description: 'Gay Club Tycoon Player',
+    description: 'Игрок Gay Tycoon',
     group: 'beginner',
   },
 };
@@ -22,7 +22,7 @@ for (const [zoneId, zone] of Object.entries(zonesConfig.zones)) {
       color: zone.color,
       hoist: false,
       mentionable: true,
-      description: `${zone.name} zone, level ${level}`,
+      description: `Зона «${zone.name}», уровень ${level}`,
       group: level === zonesConfig.startingLevel ? 'beginner' : 'zone',
       zoneId,
       level,

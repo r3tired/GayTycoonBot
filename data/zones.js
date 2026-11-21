@@ -32,7 +32,8 @@ module.exports = {
       guestsGrowth: 1.35,
     },
     chill: {
-      name: 'Чіл',
+      name: 'Зона отдыха',
+      roleName: 'Чіл', // Сохраняем старые имена ролей, чтобы не создавать дубликаты.
       color: '#10b981',
       basePrice: 150,
       baseGuestsPerHour: 20,

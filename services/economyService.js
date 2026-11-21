@@ -8,7 +8,7 @@ const totalGuestChance = Object.values(guestsConfig.types)
   .reduce((total, guest) => total + guest.chance, 0);
 
 if (Math.abs(totalGuestChance - 1) > 1e-9) {
-  throw new Error('Шанси типів гостей у data/guests.js мають у сумі дорівнювати 1');
+  throw new Error('Guest type probabilities in data/guests.js must sum to 1');
 }
 
 function getVisitorsPerHour(zone, level) {

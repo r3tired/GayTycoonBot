@@ -69,6 +69,97 @@ function setClubName(guildId, userId, clubName) {
   return { status: result.changes > 0 ? 'ok' : 'not-registered' };
 }
 
+function giveBalance(guildId, userId, amount) {
+  const transaction = db.transaction(() => {
+    if (!Number.isSafeInteger(amount) || amount <= 0) return { status: 'invalid-amount' };
+    const player = db.prepare(`
+      SELECT balance FROM users WHERE guild_id = ? AND user_id = ?
+    `).get(guildId, userId);
+    if (!player) return { status: 'not-registered' };
+
+    const balance = player.balance + amount;
+    if (!Number.isFinite(balance) || balance > Number.MAX_SAFE_INTEGER) {
+      return { status: 'balance-limit' };
+    }
+
+    db.prepare(`
+      UPDATE users SET balance = ? WHERE guild_id = ? AND user_id = ?
+    `).run(balance, guildId, userId);
+    return { status: 'ok', balance };
+  });
+
+  return transaction();
+}
+
+function setBalance(guildId, userId, amount) {
+  const transaction = db.transaction(() => {
+    if (!Number.isSafeInteger(amount) || amount < 0) return { status: 'invalid-amount' };
+    const result = db.prepare(`
+      UPDATE users SET balance = ? WHERE guild_id = ? AND user_id = ?
+    `).run(amount, guildId, userId);
+    return result.changes > 0 ? { status: 'ok', balance: amount } : { status: 'not-registered' };
+  });
+
+  return transaction();
+}
+
+function setZoneLevel(guildId, userId, zoneId, level, now = Date.now()) {
+  const transaction = db.transaction(() => {
+    if (!zonesConfig.zones[zoneId]) return { status: 'unknown-zone' };
+    if (!Number.isInteger(level) || level < 1 || level > zonesConfig.maxLevel) {
+      return { status: 'invalid-level' };
+    }
+
+    const current = db.prepare(`
+      SELECT level FROM user_zones
+      WHERE guild_id = ? AND user_id = ? AND zone_id = ?
+    `).get(guildId, userId, zoneId);
+    if (!current) {
+      const exists = db.prepare(`
+        SELECT 1 FROM users WHERE guild_id = ? AND user_id = ?
+      `).get(guildId, userId);
+      return { status: exists ? 'unknown-zone' : 'not-registered' };
+    }
+    if (current.level === level) return { status: 'unchanged', level };
+
+    db.prepare(`
+      UPDATE user_zones SET level = ?
+      WHERE guild_id = ? AND user_id = ? AND zone_id = ?
+    `).run(level, guildId, userId, zoneId);
+    db.prepare(`
+      UPDATE users SET last_collected_at = MAX(last_collected_at, ?)
+      WHERE guild_id = ? AND user_id = ?
+    `).run(now, guildId, userId);
+
+    return { status: 'ok', previousLevel: current.level, level };
+  });
+
+  return transaction();
+}
+
+function resetPlayer(guildId, userId, now = Date.now()) {
+  const transaction = db.transaction(() => {
+    const result = db.prepare(`
+      UPDATE users
+      SET balance = ?,
+          last_collected_at = MAX(last_collected_at, ?),
+          regular_guests = 0,
+          medium_guests = 0,
+          rich_guests = 0
+      WHERE guild_id = ? AND user_id = ?
+    `).run(zonesConfig.startingBalance, now, guildId, userId);
+    if (result.changes === 0) return { status: 'not-registered' };
+
+    db.prepare(`
+      UPDATE user_zones SET level = ?
+      WHERE guild_id = ? AND user_id = ?
+    `).run(zonesConfig.startingLevel, guildId, userId);
+    return { status: 'ok' };
+  });
+
+  return transaction();
+}
+
 function getPlayer(guildId, userId) {
   const user = db.prepare(`
     SELECT guild_id AS guildId, user_id AS userId, balance, club_name AS clubName,
@@ -90,6 +181,20 @@ function getPlayer(guildId, userId) {
   `).all(guildId, userId);
 
   return { ...user, zones };
+}
+
+function getLeaderboard(guildId, limit = 10) {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new RangeError('Leaderboard limit must be an integer between 1 and 100');
+  }
+
+  return db.prepare(`
+    SELECT user_id AS userId, balance, club_name AS clubName
+    FROM users
+    WHERE guild_id = ?
+    ORDER BY balance DESC, registered_at ASC, user_id ASC
+    LIMIT ?
+  `).all(guildId, limit);
 }
 
 async function runStartOnce(
@@ -229,13 +334,13 @@ function migrateLegacyClaims() {
 
   const claims = JSON.parse(fs.readFileSync(legacyPath, 'utf8'));
   if (!Array.isArray(claims) || claims.some(claim => typeof claim !== 'string')) {
-    throw new Error('Файл startClaims.json має містити масив рядків');
+    throw new Error('startClaims.json must contain an array of strings');
   }
 
   const now = Date.now();
   for (const claim of claims) {
     const match = /^(\d+):(\d+)$/.exec(claim);
-    if (!match) throw new Error(`Некоректний запис у startClaims.json: ${claim}`);
+    if (!match) throw new Error(`Invalid entry in startClaims.json: ${claim}`);
     createPlayer(match[1], match[2], now);
   }
 }
@@ -245,9 +350,14 @@ migrateLegacyClaims();
 module.exports = {
   collectIncome,
   createPlayer,
+  giveBalance,
   getPlayer,
+  getLeaderboard,
   isClubNameTaken,
+  resetPlayer,
   runStartOnce,
+  setBalance,
   setClubName,
+  setZoneLevel,
   upgradeZone,
 };

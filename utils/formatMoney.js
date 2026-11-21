@@ -1,4 +1,4 @@
-const formatter = new Intl.NumberFormat('uk-UA', {
+const formatter = new Intl.NumberFormat('ru-RU', {
   style: 'currency',
   currency: 'USD',
   maximumFractionDigits: 2,

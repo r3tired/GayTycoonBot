@@ -6,8 +6,8 @@ const CLUB_NAME_FIELD = 'club-name';
 function createClubNameModal(customId, title, currentName) {
   const input = new TextInputBuilder()
     .setCustomId(CLUB_NAME_FIELD)
-    .setLabel('Назва твого гей-клубу')
-    .setPlaceholder('Наприклад: Рожевий Єдиноріг')
+    .setLabel('Название твоего гей-клуба')
+    .setPlaceholder('Например: Розовый единорог')
     .setStyle(TextInputStyle.Short)
     .setMinLength(CLUB_NAME_MIN)
     .setMaxLength(CLUB_NAME_MAX)

@@ -35,7 +35,7 @@ function createStartEmbed(title, description, color = startColor) {
     .setColor(color)
     .setTitle(title)
     .setDescription(description)
-    .setFooter({ text: 'Gay Tycoon • Група Beginner' })
+    .setFooter({ text: 'Gay Tycoon • Стартовые роли' })
     .setTimestamp();
 }
 
@@ -81,8 +81,8 @@ async function createClub(interaction, clubName, imageSource, imageFilename, def
     await interaction.editReply({
       embeds: [
         createStartEmbed(
-          '✅ Старт уже пройдено',
-          'Ти вже використовував `/start`. Команда створює клуб лише один раз.',
+          '✅ Клуб уже создан',
+          'Ты уже запускал `/start`. Эта команда позволяет создать клуб только один раз.',
         ),
       ],
     });
@@ -93,8 +93,8 @@ async function createClub(interaction, clubName, imageSource, imageFilename, def
     await interaction.editReply({
       embeds: [
         createStartEmbed(
-          '⏳ Запит уже обробляється',
-          'Зачекай трохи — бот уже створює твій клуб.',
+          '⏳ Запрос уже обрабатывается',
+          'Подожди немного — бот уже создаёт твой клуб.',
         ),
       ],
     });
@@ -105,8 +105,8 @@ async function createClub(interaction, clubName, imageSource, imageFilename, def
     await interaction.editReply({
       embeds: [
         createStartEmbed(
-          '✏️ Така назва вже зайнята',
-          'Хтось щойно встиг зайняти цю назву. Запусти `/start` ще раз.',
+          '✏️ Это название уже занято',
+          'Кто-то только что занял это название. Запусти `/start` ещё раз.',
           0xffc857,
         ),
       ],
@@ -116,12 +116,12 @@ async function createClub(interaction, clubName, imageSource, imageFilename, def
 
   if (claim.result.higherGroupRoles) {
     const embed = createStartEmbed(
-      '🏆 У тебе вже є роль вищого рівня',
-      'Стартові ролі Beginner не видаються, щоб не конфліктувати з твоїм поточним рівнем.',
+      '🏆 У тебя уже есть роль более высокого уровня',
+      'Стартовые роли не выдаются, чтобы не конфликтовать с твоим текущим уровнем.',
       0xffc857,
     );
     embed.addFields({
-      name: 'Твої ролі',
+      name: 'Твои роли',
       value: claim.result.higherGroupRoles.map(role => `• ${role}`).join('\n'),
     });
     await interaction.editReply({ embeds: [embed] });
@@ -133,9 +133,9 @@ async function createClub(interaction, clubName, imageSource, imageFilename, def
     await interaction.editReply({
       embeds: [
         createStartEmbed(
-          '⚠️ Не вдалося видати ролі',
-          `Клуб ще не створено, бо не вдалося видати ролі: ${failed.join(', ') || 'невідомо'}. ` +
-          'Перевір права бота та ієрархію ролей і запусти `/start` ще раз.',
+          '⚠️ Не удалось выдать роли',
+          `Клуб не создан: не удалось выдать роли: ${failed.join(', ') || 'неизвестно'}. ` +
+          'Проверь права бота и иерархию ролей, затем запусти `/start` ещё раз.',
           0xffc857,
         ),
       ],
@@ -145,20 +145,20 @@ async function createClub(interaction, clubName, imageSource, imageFilename, def
 
   const result = claim.result.roles;
   const embed = createStartEmbed(
-    '🌈 Ласкаво просимо до Gay Tycoon!',
-    `Привіт, ${interaction.user}! Клуб **${escapeMarkdown(clubName)}** відкрито: ось твої стартові ролі та ${zonesConfig.startingBalance} монет.`,
+    '🌈 Добро пожаловать в Gay Tycoon!',
+    `Привет, ${interaction.user}! Клуб **${escapeMarkdown(clubName)}** открыт: вот твои стартовые роли и ${zonesConfig.startingBalance} монет.`,
   );
 
   if (result.assigned.length > 0) {
     embed.addFields({
-      name: '🎭 Нові ролі',
+      name: '🎭 Новые роли',
       value: result.assigned.map(role => `• ${role}`).join('\n'),
       inline: true,
     });
   }
   if (result.alreadyHad.length > 0) {
     embed.addFields({
-      name: '✨ Уже твої',
+      name: '✨ Уже есть',
       value: result.alreadyHad.map(role => `• ${role}`).join('\n'),
       inline: true,
     });
@@ -176,7 +176,7 @@ async function handleClubImageUpload(interaction) {
   const requestId = interaction.customId.slice(CLUB_IMAGE_MODAL_PREFIX.length);
   if (!pending || pending.requestId !== requestId) {
     await interaction.reply({
-      content: 'Час вибору зображення минув. Запусти `/start` ще раз.',
+      content: 'Время выбора изображения истекло. Запусти `/start` ещё раз.',
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -186,7 +186,7 @@ async function handleClubImageUpload(interaction) {
   const attachment = uploads?.first();
   if (!attachment) {
     await interaction.reply({
-      content: 'Завантаж одне зображення або запусти `/start` ще раз.',
+      content: 'Загрузи одно изображение или запусти `/start` ещё раз.',
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -205,8 +205,8 @@ async function handleClubImageUpload(interaction) {
     await createClub(interaction, pending.clubName, 'upload', filename, true);
   } catch (error) {
     if (!(error instanceof ClubImageError)) throw error;
-    console.error('Не вдалося зберегти зображення клубу:', error);
-    await interaction.editReply({ content: `❌ ${error.message} Запусти \`/start\` ще раз.` });
+    console.error('Failed to save club image:', error.name);
+    await interaction.editReply({ content: `❌ ${error.message} Запусти \`/start\` ещё раз.` });
   } finally {
     clearPendingStart(interaction.guildId, interaction.user.id);
     if (filename) {
@@ -222,7 +222,7 @@ module.exports = {
   modalPrefix: CLUB_IMAGE_MODAL_PREFIX,
   data: new SlashCommandBuilder()
     .setName('start')
-    .setDescription('Створити свій гей-клуб і отримати стартові ролі'),
+    .setDescription('Создать свой гей-клуб и получить стартовые роли'),
 
   // Крок 1: перевірки й вікно для введення назви клубу
   async execute(interaction) {
@@ -230,8 +230,8 @@ module.exports = {
       await interaction.reply({
         embeds: [
           createStartEmbed(
-            '🏰 Команда доступна на сервері',
-            'Зайди на сервер Gay Tycoon і запусти `/start` там.',
+            '🏰 Команда доступна только на сервере',
+            'Зайди на сервер Gay Tycoon и запусти `/start` там.',
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -245,8 +245,8 @@ module.exports = {
       await interaction.reply({
         embeds: [
           createStartEmbed(
-            '⏳ Стартові ролі ще готуються',
-            'Для групи Beginner поки не налаштовано ролей. Спробуй трохи пізніше.',
+            '⏳ Стартовые роли ещё готовятся',
+            'Для новичков пока не настроены роли. Попробуй немного позже.',
             0xffc857,
           ),
         ],
@@ -259,8 +259,8 @@ module.exports = {
       await interaction.reply({
         embeds: [
           createStartEmbed(
-            '✅ Старт уже пройдено',
-            'Ти вже використовував `/start`. Команда створює клуб лише один раз. Змінити назву можна командою `/rename`.',
+            '✅ Клуб уже создан',
+            'Ты уже запускал `/start`. Эта команда позволяет создать клуб только один раз. Название можно изменить командой `/rename`.',
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -268,7 +268,7 @@ module.exports = {
       return;
     }
 
-    await interaction.showModal(createClubNameModal(modalId, 'Назви свій гей-клуб'));
+    await interaction.showModal(createClubNameModal(modalId, 'Назови свой гей-клуб'));
   },
 
   // Крок 2: перевіряємо назву та даємо вибрати зображення клубу
@@ -279,7 +279,7 @@ module.exports = {
     const check = validateClubName(interaction.fields.getTextInputValue(CLUB_NAME_FIELD));
     if (!check.ok) {
       await interaction.reply({
-        embeds: [createStartEmbed('✏️ Ця назва не підходить', `${check.reason}\nЗапусти \`/start\` ще раз.`, 0xffc857)],
+        embeds: [createStartEmbed('✏️ Это название не подходит', `${check.reason}\nЗапусти \`/start\` ещё раз.`, 0xffc857)],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -290,8 +290,8 @@ module.exports = {
       await interaction.reply({
         embeds: [
           createStartEmbed(
-            '✏️ Така назва вже зайнята',
-            `На цьому сервері вже є клуб **${escapeMarkdown(clubName)}**. Запусти \`/start\` ще раз і вигадай іншу назву.`,
+            '✏️ Это название уже занято',
+            `На этом сервере уже есть клуб **${escapeMarkdown(clubName)}**. Запусти \`/start\` ещё раз и придумай другое название.`,
             0xffc857,
           ),
         ],
@@ -304,18 +304,18 @@ module.exports = {
     const buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`start-image:profile:${interaction.user.id}:${interaction.id}`)
-        .setLabel('Використати аватар профілю')
+        .setLabel('Использовать аватар профиля')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`start-image:upload:${interaction.user.id}:${interaction.id}`)
-        .setLabel('Завантажити своє зображення')
+        .setLabel('Загрузить своё изображение')
         .setStyle(ButtonStyle.Primary),
     );
     await interaction.reply({
       embeds: [
         createStartEmbed(
-          '🖼️ Обери зображення клубу',
-          `Назву **${escapeMarkdown(clubName)}** збережено. Вибери аватар профілю або завантаж власне зображення.`,
+          '🖼️ Выбери изображение клуба',
+          `Название **${escapeMarkdown(clubName)}** сохранено. Выбери аватар профиля или загрузи своё изображение.`,
         ),
       ],
       components: [buttons],
@@ -327,7 +327,7 @@ module.exports = {
     const [, choice, ownerId, requestId] = interaction.customId.split(':');
     if (!interaction.inGuild() || ownerId !== interaction.user.id) {
       await interaction.reply({
-        content: 'Цей вибір зображення призначений іншому гравцеві.',
+        content: 'Этот выбор изображения предназначен другому игроку.',
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -337,7 +337,7 @@ module.exports = {
     const pending = pendingStarts.get(key);
     if (!pending || pending.requestId !== requestId) {
       await interaction.reply({
-        content: 'Час вибору зображення минув. Запусти `/start` ще раз.',
+        content: 'Время выбора изображения истекло. Запусти `/start` ещё раз.',
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -349,7 +349,7 @@ module.exports = {
     }
     if (choice !== 'profile') {
       await interaction.reply({
-        content: 'Невідомий варіант зображення. Запусти `/start` ще раз.',
+        content: 'Неизвестный вариант изображения. Запусти `/start` ещё раз.',
         flags: MessageFlags.Ephemeral,
       });
       return;

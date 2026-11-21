@@ -11,16 +11,16 @@ function validateClubName(input) {
   const length = [...name].length;
 
   if (length < CLUB_NAME_MIN) {
-    return { ok: false, reason: `Назва закоротка: потрібно від ${CLUB_NAME_MIN} до ${CLUB_NAME_MAX} символів.` };
+    return { ok: false, reason: `Слишком короткое название: нужно от ${CLUB_NAME_MIN} до ${CLUB_NAME_MAX} символов.` };
   }
   if (length > CLUB_NAME_MAX) {
-    return { ok: false, reason: `Назва задовга: максимум ${CLUB_NAME_MAX} символів.` };
+    return { ok: false, reason: `Слишком длинное название: максимум ${CLUB_NAME_MAX} символов.` };
   }
   if (/[<>@]/.test(name)) {
-    return { ok: false, reason: 'У назві не можна використовувати символи `@`, `<` та `>`.' };
+    return { ok: false, reason: 'В названии нельзя использовать символы `@`, `<` и `>`.' };
   }
   if (/https?:|discord\.gg|www\./i.test(name)) {
-    return { ok: false, reason: 'У назві не можна вказувати посилання.' };
+    return { ok: false, reason: 'В названии нельзя указывать ссылки.' };
   }
   return { ok: true, name };
 }

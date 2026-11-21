@@ -13,11 +13,11 @@ function createClubImageModal(requestId) {
 
   return new ModalBuilder()
     .setCustomId(`${CLUB_IMAGE_MODAL_PREFIX}${requestId}`)
-    .setTitle('Зображення клубу')
+    .setTitle('Изображение клуба')
     .addLabelComponents(
       new LabelBuilder()
-        .setLabel('Завантаж зображення')
-        .setDescription('PNG, JPEG або WebP; до 5 МБ.')
+        .setLabel('Загрузите изображение')
+        .setDescription('PNG, JPEG или WebP; до 5 МБ.')
         .setFileUploadComponent(upload),
     );
 }

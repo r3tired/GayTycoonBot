@@ -1,11 +1,14 @@
 const assert = require('node:assert/strict');
-const { test } = require('node:test');
+const { after, test } = require('node:test');
 const db = require('../database/db');
 const users = require('../database/users');
 const economy = require('../services/economyService');
 const { syncZoneRoles } = require('../services/roleSync');
 const rolesConfig = require('../data/roles');
 const zonesConfig = require('../data/zones');
+const adminCommands = require('../commands/admin/adminCommands');
+
+after(() => db.close());
 
 // Мінімальні підробки guild/member для перевірки логіки ролей без Discord
 function fakeMember(roleNames, ownedNames) {
@@ -61,7 +64,6 @@ test('зону можна прокачати лише до maxLevel', async t =>
   const userId = `upg-user-${suffix}`;
   t.after(() => {
     db.prepare('DELETE FROM users WHERE guild_id = ?').run(guildId);
-    db.close();
   });
 
   users.runStartOnce(guildId, userId, async () => ({ completed: true }));
@@ -80,4 +82,88 @@ test('зону можна прокачати лише до maxLevel', async t =>
   assert.equal(bar.level, 3);
   assert.equal(bar.isMaxLevel, true);
   assert.equal(bar.nextUpgradePrice, null);
+});
+
+test('admin database operations validate values, update zones and reset progress', t => {
+  const suffix = `${process.pid}-${Date.now()}`;
+  const guildId = `admin-guild-${suffix}`;
+  const userId = `admin-user-${suffix}`;
+  const clubName = `Admin Club ${suffix}`;
+  const imageFilename = `${suffix}.webp`;
+  const now = Date.now() - 10_000;
+
+  assert.equal(users.createPlayer(guildId, userId, now, clubName, 'upload', imageFilename), true);
+  t.after(() => db.prepare('DELETE FROM users WHERE guild_id = ?').run(guildId));
+  const player = users.getPlayer(guildId, userId);
+
+  assert.equal(users.giveBalance(guildId, userId, 250).balance, player.balance + 250);
+  assert.equal(users.giveBalance(guildId, userId, 0).status, 'invalid-amount');
+  assert.equal(users.setBalance(guildId, userId, 0).balance, 0);
+  assert.equal(users.setBalance(guildId, userId, -1).status, 'invalid-amount');
+  assert.equal(users.giveBalance(guildId, 'missing-user', 1).status, 'not-registered');
+
+  const changedAt = player.lastCollectedAt + 5_000;
+  assert.deepEqual(users.setZoneLevel(guildId, userId, 'bar', 2, changedAt), {
+    status: 'ok',
+    previousLevel: 1,
+    level: 2,
+  });
+  assert.equal(users.getPlayer(guildId, userId).lastCollectedAt, changedAt);
+  assert.equal(users.setZoneLevel(guildId, userId, 'bar', 2).status, 'unchanged');
+  assert.equal(users.setZoneLevel(guildId, userId, 'bar', zonesConfig.maxLevel + 1).status, 'invalid-level');
+
+  db.prepare(`
+    UPDATE users SET regular_guests = 8, medium_guests = 3, rich_guests = 1
+    WHERE guild_id = ? AND user_id = ?
+  `).run(guildId, userId);
+  assert.equal(users.resetPlayer(guildId, userId, changedAt + 5_000).status, 'ok');
+
+  const reset = users.getPlayer(guildId, userId);
+  assert.equal(reset.balance, zonesConfig.startingBalance);
+  assert.ok(reset.zones.every(zone => zone.level === zonesConfig.startingLevel));
+  assert.deepEqual([reset.regularGuests, reset.mediumGuests, reset.richGuests], [0, 0, 0]);
+  assert.equal(reset.clubName, clubName);
+  assert.equal(reset.clubImageSource, 'upload');
+  assert.equal(reset.clubImageFilename, imageFilename);
+});
+
+test('admin commands are registered and reject non-owner callers', async t => {
+  const suffix = `${process.pid}-${Date.now()}`;
+  const guildId = `admin-auth-guild-${suffix}`;
+  const userId = `admin-auth-user-${suffix}`;
+  assert.equal(users.createPlayer(guildId, userId), true);
+  t.after(() => db.prepare('DELETE FROM users WHERE guild_id = ?').run(guildId));
+
+  const [giveCommand, changeCommand] = adminCommands;
+  assert.deepEqual(adminCommands.map(command => command.data.name), ['give', 'change', 'reset']);
+  assert.deepEqual(changeCommand.data.toJSON().options.map(option => option.name), ['balance', 'zone']);
+
+  const previousCreatorId = process.env.CREATORID;
+  process.env.CREATORID = 'bot-owner';
+  t.after(() => {
+    if (previousCreatorId === undefined) delete process.env.CREATORID;
+    else process.env.CREATORID = previousCreatorId;
+  });
+
+  let response;
+  const interaction = {
+    guildId,
+    inGuild: () => true,
+    user: { id: 'not-the-owner' },
+    reply: async payload => { response = payload; },
+    deferReply: async () => {},
+    editReply: async payload => { response = payload; },
+    options: {
+      getUser: () => ({ id: userId }),
+      getInteger: () => 100,
+    },
+  };
+  await giveCommand.execute(interaction);
+  assert.match(response.content, /только владельцу бота/);
+  assert.equal(users.getPlayer(guildId, userId).balance, zonesConfig.startingBalance);
+
+  interaction.user.id = 'bot-owner';
+  await giveCommand.execute(interaction);
+  assert.match(response.content, /Выдано/);
+  assert.equal(users.getPlayer(guildId, userId).balance, zonesConfig.startingBalance + 100);
 });

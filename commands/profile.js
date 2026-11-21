@@ -11,12 +11,12 @@ const { getClubImagePath } = require('../utils/clubImage');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('profile')
-    .setDescription('Переглянути баланс і рівні своїх зон'),
+    .setDescription('Посмотреть баланс и уровни своих зон'),
 
   async execute(interaction) {
     if (!interaction.inGuild()) {
       await interaction.reply({
-        content: 'Профіль доступний лише на сервері.',
+        content: 'Профиль доступен только на сервере.',
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -25,7 +25,7 @@ module.exports = {
     const player = economy.getPlayer(interaction.guildId, interaction.user.id);
     if (!player) {
       await interaction.reply({
-        content: 'Спершу створи клуб командою `/start`.',
+        content: 'Сначала создай клуб командой `/start`.',
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -57,23 +57,23 @@ module.exports = {
       .addFields(
         { name: '💵 Баланс', value: formatMoney(player.balance), inline: true },
         {
-          name: '👥 Відвідуваність',
-          value: `${formatCount(player.visitorsPerHour)} гостей/год`,
+          name: '👥 Посещаемость',
+          value: `${formatCount(player.visitorsPerHour)} гостей/ч`,
           inline: true,
         },
         {
-          name: '📊 Усього гостей',
-          value: `${formatCount(player.totalGuests)}\n💎 Багатих: ${formatCount(player.richGuests)}`,
+          name: '📊 Всего посетителей',
+          value: `${formatCount(player.totalGuests)}\n💎 Богатых: ${formatCount(player.richGuests)}`,
           inline: true,
         },
         {
-          name: '🎭 Зони',
+          name: '🎭 Зоны',
           value: player.zones
-            .map(zone => `**${zone.name}** — рівень ${zone.level}/${zonesConfig.maxLevel} (${formatCount(zone.visitorsPerHour)} гостей/год)`)
+            .map(zone => `**${zone.name}** — уровень ${zone.level}/${zonesConfig.maxLevel} (${formatCount(zone.visitorsPerHour)} гостей/ч)`)
             .join('\n'),
         },
         {
-          name: '📅 Реєстрація',
+          name: '📅 Регистрация',
           value: `<t:${Math.floor(player.registeredAt / 1000)}:D>`,
           inline: true,
         },
@@ -81,9 +81,9 @@ module.exports = {
       .setFooter({ text: 'Gay Tycoon' });
 
     const notices = [];
-    if (!player.clubName) notices.push('У клуба ще немає назви. Задай її командою `/rename`.');
+    if (!player.clubName) notices.push('У клуба пока нет названия. Задай его командой `/rename`.');
     if (imageMissing) {
-      notices.push('Зображення клубу не знайдено; показано аватар профілю замість нього.');
+      notices.push('Изображение клуба не найдено; вместо него показан аватар профиля.');
     }
     if (notices.length > 0) embed.setDescription(notices.join('\n'));
 

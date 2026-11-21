@@ -14,7 +14,7 @@ class ClubImageError extends Error {
 
 function getClubImagePath(filename) {
   if (!/^\d+-\d+-\d+\.(png|jpg|webp)$/.test(filename)) {
-    throw new Error('Некоректне ім’я файлу зображення клубу');
+    throw new Error('Invalid club image filename');
   }
   return path.join(CLUB_IMAGE_DIRECTORY, filename);
 }
@@ -28,25 +28,25 @@ function getImageExtension(buffer) {
 
 async function saveClubImage(attachment, guildId, userId, interactionId) {
   if (!Number.isInteger(attachment.size) || attachment.size < 1 || attachment.size > MAX_CLUB_IMAGE_SIZE) {
-    throw new ClubImageError('Зображення має бути розміром від 1 байта до 5 МБ.');
+    throw new ClubImageError('Размер изображения должен быть от 1 байта до 5 МБ.');
   }
 
   const contentType = attachment.contentType?.split(';')[0];
   if (contentType && !allowedContentTypes.has(contentType)) {
-    throw new ClubImageError('Підтримуються лише PNG, JPEG і WebP.');
+    throw new ClubImageError('Поддерживаются только PNG, JPEG и WebP.');
   }
 
   let url;
   try {
     url = new URL(attachment.url);
   } catch {
-    throw new ClubImageError('Не вдалося прочитати завантажене зображення.');
+    throw new ClubImageError('Не удалось прочитать загруженное изображение.');
   }
   if (
     url.protocol !== 'https:' ||
     !['cdn.discordapp.com', 'media.discordapp.net'].includes(url.hostname)
   ) {
-    throw new ClubImageError('Зображення має бути завантажене у Discord.');
+    throw new ClubImageError('Изображение должно быть загружено в Discord.');
   }
 
   let response;
@@ -56,15 +56,15 @@ async function saveClubImage(attachment, guildId, userId, interactionId) {
       signal: AbortSignal.timeout(15_000),
     });
   } catch {
-    throw new ClubImageError('Не вдалося завантажити зображення з Discord. Спробуй ще раз.');
+    throw new ClubImageError('Не удалось загрузить изображение из Discord. Попробуйте ещё раз.');
   }
   if (!response.ok || !response.body) {
-    throw new ClubImageError('Discord не зміг віддати завантажене зображення.');
+    throw new ClubImageError('Discord не смог передать загруженное изображение.');
   }
 
   const contentLength = Number(response.headers.get('content-length'));
   if (Number.isFinite(contentLength) && contentLength > MAX_CLUB_IMAGE_SIZE) {
-    throw new ClubImageError('Зображення завелике. Максимальний розмір — 5 МБ.');
+    throw new ClubImageError('Изображение слишком большое. Максимальный размер — 5 МБ.');
   }
 
   const chunks = [];
@@ -74,24 +74,24 @@ async function saveClubImage(attachment, guildId, userId, interactionId) {
       const buffer = Buffer.from(chunk);
       size += buffer.length;
       if (size > MAX_CLUB_IMAGE_SIZE) {
-        throw new ClubImageError('Зображення завелике. Максимальний розмір — 5 МБ.');
+        throw new ClubImageError('Изображение слишком большое. Максимальный размер — 5 МБ.');
       }
       chunks.push(buffer);
     }
   } catch (error) {
     if (error instanceof ClubImageError) throw error;
-    throw new ClubImageError('Не вдалося прочитати завантажене зображення.');
+    throw new ClubImageError('Не удалось прочитать загруженное изображение.');
   }
 
   const image = Buffer.concat(chunks, size);
   const extension = getImageExtension(image);
   if (!extension) {
-    throw new ClubImageError('Файл не є підтримуваним зображенням PNG, JPEG або WebP.');
+    throw new ClubImageError('Файл не является изображением поддерживаемого формата PNG, JPEG или WebP.');
   }
 
   const ids = [guildId, userId, interactionId];
   if (ids.some(id => !/^\d+$/.test(id))) {
-    throw new Error('Discord повернув некоректний ідентифікатор для зображення клубу');
+    throw new Error('Discord returned an invalid ID for a club image');
   }
 
   const filename = `${guildId}-${userId}-${interactionId}.${extension}`;

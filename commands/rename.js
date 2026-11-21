@@ -9,17 +9,17 @@ module.exports = {
   modalId,
   data: new SlashCommandBuilder()
     .setName('rename')
-    .setDescription('Змінити назву свого гей-клубу'),
+    .setDescription('Изменить название своего гей-клуба'),
 
   async execute(interaction) {
     if (!interaction.inGuild()) {
-      await interaction.reply({ content: 'Змінювати назву можна лише на сервері.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'Менять название можно только на сервере.', flags: MessageFlags.Ephemeral });
       return;
     }
 
     const player = getPlayer(interaction.guildId, interaction.user.id);
     if (!player) {
-      await interaction.reply({ content: 'Спершу створи клуб командою `/start`.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'Сначала создай клуб командой `/start`.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -31,15 +31,15 @@ module.exports = {
 
     const check = validateClubName(interaction.fields.getTextInputValue(CLUB_NAME_FIELD));
     if (!check.ok) {
-      await interaction.reply({ content: `✏️ ${check.reason} Запусти \`/rename\` ще раз.`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: `✏️ ${check.reason} Запусти \`/rename\` ещё раз.`, flags: MessageFlags.Ephemeral });
       return;
     }
 
     const result = setClubName(interaction.guildId, interaction.user.id, check.name);
     const messages = {
-      ok: `✅ Тепер твій клуб називається **${escapeMarkdown(check.name)}**.`,
-      'name-taken': '✏️ Така назва вже зайнята. Запусти `/rename` ще раз і вигадай іншу.',
-      'not-registered': 'Спершу створи клуб командою `/start`.',
+      ok: `✅ Теперь твой клуб называется **${escapeMarkdown(check.name)}**.`,
+      'name-taken': '✏️ Это название уже занято. Запусти `/rename` и придумай другое.',
+      'not-registered': 'Сначала создай клуб командой `/start`.',
     };
     await interaction.reply({ content: messages[result.status], flags: MessageFlags.Ephemeral });
   },

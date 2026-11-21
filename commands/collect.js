@@ -8,12 +8,12 @@ const guestTypes = guestsConfig.types;
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('collect')
-    .setDescription('Зібрати пасивний дохід свого клубу'),
+    .setDescription('Собрать пассивный доход своего клуба'),
 
   async execute(interaction) {
     if (!interaction.inGuild()) {
       await interaction.reply({
-        content: 'Збирати дохід можна лише на сервері.',
+        content: 'Собирать доход можно только на сервере.',
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -22,7 +22,7 @@ module.exports = {
     const result = economy.collectIncome(interaction.guildId, interaction.user.id);
     if (!result) {
       await interaction.reply({
-        content: 'Спершу створи клуб командою `/start`.',
+        content: 'Сначала создай клуб командой `/start`.',
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -30,23 +30,23 @@ module.exports = {
 
     const elapsedHours = formatCount(result.elapsedMs / 3_600_000);
     const guestSummary =
-      `${formatCount(result.regularGuests)} ${guestTypes.regular.name}, ` +
-      `${formatCount(result.mediumGuests)} ${guestTypes.medium.name}, ` +
-      `${formatCount(result.richGuests)} ${guestTypes.rich.name} 💎`;
+      `${guestTypes.regular.name}: ${formatCount(result.regularGuests)}, ` +
+      `${guestTypes.medium.name}: ${formatCount(result.mediumGuests)}, ` +
+      `${guestTypes.rich.name}: ${formatCount(result.richGuests)} 💎`;
     const embed = new EmbedBuilder()
       .setColor(0x00eeff)
-      .setTitle('🪩 Відвідуваність клубу')
+      .setTitle('🪩 Посещаемость клуба')
       .setDescription(
-        `За **${elapsedHours} год** прийшло **${formatCount(result.totalGuests)} гостей**: ${guestSummary}.\n` +
-        `Зароблено **${formatMoney(result.earned)}**` +
-        (result.tips > 0 ? ` (чайові від багатих: ${formatMoney(result.tips)})` : '') +
+        `За **${elapsedHours} ч** в клубе побывало **${formatCount(result.totalGuests)} человек**: ${guestSummary}.\n` +
+        `Заработано **${formatMoney(result.earned)}**` +
+        (result.tips > 0 ? ` (чаевые от богатых гостей: ${formatMoney(result.tips)})` : '') +
         '.',
       )
       .addFields(
         { name: '💵 Баланс', value: formatMoney(result.balance), inline: true },
       )
       .setFooter({
-        text: `Дохід накопичується максимум за ${guestsConfig.maxAccumulationHours} годин.`,
+        text: `Доход накапливается максимум за ${guestsConfig.maxAccumulationHours} часов.`,
       });
 
     await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });

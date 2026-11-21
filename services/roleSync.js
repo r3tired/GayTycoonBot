@@ -18,16 +18,16 @@ async function syncRoles(guild) {
           hoist: cfg.hoist ?? false,
           mentionable: cfg.mentionable ?? false,
           permissions: [], // косметична роль без прав
-          reason: `Автостворення ролі (${key})`,
+          reason: `Автоматическое создание роли (${key})`,
         });
-        console.log(`✅ Створено роль: ${cfg.name}`);
+        console.log(`Created role: ${cfg.name}`);
         result.created++;
         continue;
       }
 
       // Бот не може редагувати ролі, що вищі за його власну
       if (!role.editable) {
-        console.warn(`⚠️ Немає доступу до ролі: ${cfg.name} (підніми роль бота вище)`);
+        console.warn(`Cannot manage role: ${cfg.name} (move the bot role higher)`);
         result.skipped++;
         continue;
       }
@@ -42,15 +42,15 @@ async function syncRoles(guild) {
           colors: { primaryColor: cfg.color },
           hoist: cfg.hoist ?? false,
           mentionable: cfg.mentionable ?? false,
-          reason: `Автооновлення ролі (${key})`,
+          reason: `Автоматическое обновление роли (${key})`,
         });
-        console.log(`🔄 Оновлено роль: ${cfg.name}`);
+        console.log(`Updated role: ${cfg.name}`);
         result.updated++;
       } else {
         result.skipped++;
       }
     } catch (err) {
-      console.error(`❌ Помилка з роллю ${cfg.name}:`, err.message);
+      console.error(`Role sync failed for ${cfg.name}:`, err.message);
       result.failed++;
     }
   }
@@ -61,14 +61,14 @@ async function syncRoles(guild) {
 // Видача однієї ролі за ключем з roles.js
 async function giveRole(member, key) {
   const cfg = rolesConfig[key];
-  if (!cfg) throw new Error(`Невідомий ключ ролі: ${key}`);
+  if (!cfg) throw new Error(`Unknown role key: ${key}`);
 
   const roles = await member.guild.roles.fetch();
   const role = roles.find(r => r.name === cfg.name);
   if (!role) return false;
   if (member.roles.cache.has(role.id)) return true;
 
-  await member.roles.add(role, 'Видача ролі');
+  await member.roles.add(role, 'Выдача роли');
   return true;
 }
 
@@ -82,7 +82,7 @@ async function giveGroupRoles(member, group) {
     try {
       const role = roles.find(candidate => candidate.name === cfg.name);
       if (!role) {
-        throw new Error(`Роль "${cfg.name}" ще не створена`);
+        throw new Error(`Role "${cfg.name}" has not been created`);
       }
 
       if (member.roles.cache.has(role.id)) {
@@ -90,10 +90,10 @@ async function giveGroupRoles(member, group) {
         continue;
       }
 
-      await member.roles.add(role, `Видача ролі групи ${group} (${key})`);
+      await member.roles.add(role, `Выдача роли группы ${group} (${key})`);
       result.assigned.push(cfg.name);
     } catch (error) {
-      console.error(`Не вдалося видати роль ${cfg.name}:`, error);
+      console.error(`Failed to assign role ${cfg.name}:`, error);
       result.failed.push(cfg.name);
     }
   }
@@ -139,7 +139,7 @@ async function syncZoneRoles(member, playerZones) {
     const targetName = zoneRoleName(zone, level);
     try {
       const target = await findRole(targetName);
-      if (!target) throw new Error(`Роль "${targetName}" ще не створена`);
+      if (!target) throw new Error(`Role "${targetName}" has not been created`);
 
       const toRemove = [];
       for (let other = 1; other <= zonesConfig.maxLevel; other++) {
@@ -151,11 +151,11 @@ async function syncZoneRoles(member, playerZones) {
       if (!needsAdd && toRemove.length === 0) continue;
 
       // Спочатку видаємо нову роль, потім знімаємо стару: гравець не лишається без ролі
-      if (needsAdd) await member.roles.add(target, `Рівень зони: ${targetName}`);
-      if (toRemove.length > 0) await member.roles.remove(toRemove, `Заміна ролі на ${targetName}`);
+      if (needsAdd) await member.roles.add(target, `Уровень зоны: ${targetName}`);
+      if (toRemove.length > 0) await member.roles.remove(toRemove, `Замена роли на ${targetName}`);
       result.changed.push(targetName);
     } catch (error) {
-      console.error(`Не вдалося оновити роль ${targetName}:`, error);
+      console.error(`Failed to update role ${targetName}:`, error);
       result.failed.push(targetName);
     }
   }

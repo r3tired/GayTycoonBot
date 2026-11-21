@@ -1,6 +1,6 @@
-// Єдине місце, де формується назва ролі рівня зони: «Бар Зона 2»
+// Use the legacy role label when configured so localization does not create duplicate Discord roles.
 function zoneRoleName(zone, level) {
-  return `${zone.name} Зона ${level}`;
+  return `${zone.roleName ?? zone.name} Зона ${level}`;
 }
 
 module.exports = { zoneRoleName };

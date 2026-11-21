@@ -33,7 +33,7 @@ test('club image modal accepts one image and the upload is stored and linked to 
   const choiceButtons = choiceReply.components[0].components;
   assert.deepEqual(
     choiceButtons.map(button => button.data.label),
-    ['Використати аватар профілю', 'Завантажити своє зображення'],
+    ['Использовать аватар профиля', 'Загрузить своё изображение'],
   );
   let uploadModal;
   await startCommand.handleImageChoice({
