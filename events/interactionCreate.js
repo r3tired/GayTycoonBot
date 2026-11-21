@@ -11,10 +11,10 @@ module.exports = {
     try {
       await command.execute(interaction);
     } catch (error) {
-      console.error(`Помилка під час виконання /${interaction.commandName}:`, error);
+      console.error(`❌ Error executing /${interaction.commandName}:`, error);
 
       const response = {
-        content: 'Не вдалося виконати команду. Спробуй пізніше або звернись до адміністратора.',
+        content: 'Failed to execute command. Please try again later or contact an administrator.',
         ephemeral: true,
       };
 

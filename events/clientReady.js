@@ -5,17 +5,17 @@ module.exports = {
   name: Events.ClientReady,
   once: true,
   async execute(client) {
-    console.log(`Бот запущений як ${client.user.tag}`);
+    console.log(`Bot is ready as ${client.user.tag}`);
 
     // 1. Спочатку команди
     try {
       const commands = [...client.commands.values()].map(c => c.data.toJSON());
       for (const guild of client.guilds.cache.values()) {
         await guild.commands.set(commands);
-        console.log(`[${guild.name}] зареєстровано команд: ${commands.length}`);
+        console.log(`[${guild.name}] registered commands: ${commands.length}`);
       }
     } catch (err) {
-      console.error('❌ Помилка реєстрації команд:', err);
+      console.error('❌ Error registering commands:', err);
     }
 
     // 2. Потім ролі
@@ -23,11 +23,11 @@ module.exports = {
       try {
         const res = await syncRoles(guild);
         console.log(
-          `[${guild.name}] ролі: +${res.created} створено, ~${res.updated} оновлено, ` +
-          `${res.skipped} без змін, ${res.failed} помилок`
+          `[${guild.name}] roles: +${res.created} created, ~${res.updated} updated, ` +
+          `${res.skipped} unchanged, ${res.failed} errors`
         );
       } catch (err) {
-        console.error(`❌ Помилка ролей на ${guild.name}:`, err);
+        console.error(`❌ Error syncing roles for ${guild.name}:`, err);
       }
     }
   },

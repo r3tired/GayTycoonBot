@@ -6,11 +6,11 @@ const logger = require('./utils/logger');
 logger.hookConsole();
 
 process.on('uncaughtException', error => {
-  logger.error('КРИТИЧНА ПОМИЛКА (uncaughtException):', error);
+  logger.error('❌ CRITICAL ERROR (uncaughtException):', error);
   process.exit(1);
 });
 process.on('unhandledRejection', reason => {
-  logger.error('Необроблена помилка промісу (unhandledRejection):', reason);
+  logger.error('❌ UNHANDLED PROMISE REJECTION (unhandledRejection):', reason);
 });
 
 logger.info('=== Запуск бота ===');
@@ -21,15 +21,15 @@ require('dotenv').config({ path: path.join(__dirname, 'bot.env') });
 
 const token = process.env.BOTTOKEN;
 if (!token || token.startsWith('вставте')) {
-  throw new Error('У bot.env не задано справжній BOTTOKEN');
+  throw new Error('❌ У bot.env не задано справжній BOTTOKEN');
 }
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
-client.on('error', error => logger.error('Помилка клієнта Discord:', error));
-client.on('warn', message => logger.warn('Попередження Discord:', message));
+client.on('error', error => logger.error('❌ Error with Discord client:', error));
+client.on('warn', message => logger.warn('❌ Discord warning:', message));
 
 // Команди (шукає .js і в підпапках)
 client.commands = new Collection();
@@ -44,12 +44,12 @@ function loadCommands(dir) {
         const command = require(fullPath);
         if ('data' in command && 'execute' in command) {
           client.commands.set(command.data.name, command);
-          logger.info(`Завантажено команду: /${command.data.name}`);
+          logger.info(`❌ Завантажено команду: /${command.data.name}`);
         } else {
-          logger.warn(`Файл ${entry.name} без data/execute, пропущено`);
+          logger.warn(`❌ Файл ${entry.name} без data/execute, пропущено`);
         }
       } catch (error) {
-        logger.error(`Не вдалося завантажити команду ${entry.name}:`, error);
+        logger.error(`❌ Не вдалося завантажити команду ${entry.name}:`, error);
       }
     }
   }
@@ -65,11 +65,11 @@ for (const file of fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'
       try {
         await event.execute(...args);
       } catch (error) {
-        logger.error(`Помилка в події ${event.name}:`, error);
+        logger.error(`❌ Error in event ${event.name}:`, error);
       }
     };
     client[event.once ? 'once' : 'on'](event.name, handler);
-    logger.info(`Завантажено подію: ${event.name}`);
+    logger.info(`❌ Завантажено подію: ${event.name}`);
   } catch (error) {
     logger.error(`Не вдалося завантажити подію ${file}:`, error);
   }

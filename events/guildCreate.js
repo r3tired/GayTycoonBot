@@ -10,7 +10,7 @@ module.exports = {
       await guild.commands.set(commands);
       await syncRoles(guild);
     } catch (err) {
-      console.error(`❌ Помилка налаштування сервера ${guild.name}:`, err);
+      console.error(`❌ Error setting up server ${guild.name}:`, err);
     }
   },
 };
