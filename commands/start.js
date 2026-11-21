@@ -1,6 +1,7 @@
 const { EmbedBuilder, MessageFlags, SlashCommandBuilder } = require('discord.js');
 const { giveGroupRoles, getMemberRolesFromOtherGroups } = require('../services/roleSync');
-const { runStartOnce } = require('../services/startClaim');
+const { runStartOnce } = require('../database/users');
+const zonesConfig = require('../data/zones');
 const rolesConfig = require('../data/roles');
 
 const group = 'beginner';
@@ -108,8 +109,8 @@ module.exports = {
     const embed = createStartEmbed(
       hasFailures ? '🌈 Твій старт майже готовий' : '🌈 Ласкаво просимо до Gay Tycoon!',
       result.assigned.length > 0
-        ? `Привіт, ${interaction.user}! Твоя пригода починається — ось твої стартові ролі.`
-        : 'Привіт! Схоже, ти вже отримав усі доступні стартові ролі. Гарної гри!',
+        ? `Привіт, ${interaction.user}! Твоя пригода починається — ось твої стартові ролі та ${zonesConfig.startingBalance} монет.`
+        : `Привіт! Усі стартові ролі вже є — клуб створено з балансом ${zonesConfig.startingBalance} монет.`,
       hasFailures ? 0xffc857 : startColor,
     );
 

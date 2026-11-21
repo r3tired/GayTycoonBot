@@ -12,7 +12,7 @@ async function syncRoles(guild) {
       if (!role) {
         await guild.roles.create({
           name: cfg.name,
-          color: cfg.color,
+          colors: { primaryColor: cfg.color },
           hoist: cfg.hoist ?? false,
           mentionable: cfg.mentionable ?? false,
           permissions: [], // косметична роль без прав
@@ -37,7 +37,7 @@ async function syncRoles(guild) {
 
       if (needsUpdate) {
         await role.edit({
-          color: cfg.color,
+          colors: { primaryColor: cfg.color },
           hoist: cfg.hoist ?? false,
           mentionable: cfg.mentionable ?? false,
           reason: `Автооновлення ролі (${key})`,

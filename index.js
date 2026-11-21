@@ -17,7 +17,7 @@ logger.info('=== Запуск бота ===');
 
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 
-require('dotenv').config({ path: path.join(__dirname, 'bot.env') });
+require('dotenv').config({ path: path.join(__dirname, 'bot.env'), quiet: true });
 
 const token = process.env.BOTTOKEN;
 if (!token || token.startsWith('вставте')) {
