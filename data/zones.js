@@ -1,7 +1,7 @@
 module.exports = {
   startingBalance: 1000,
   startingLevel: 1,
-  maxLevel: 3, // рівнів у кожної зони; для кожного рівня є своя роль («Бар Зона 1..3»)
+  maxLevel: 3,
   zones: {
     strip: {
       name: 'Стриптиз',

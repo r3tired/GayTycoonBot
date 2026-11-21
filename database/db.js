@@ -27,4 +27,14 @@ db.exec(`
   );
 `);
 
+// Міграція для баз, створених до появи назв клубів
+const userColumns = db.prepare('PRAGMA table_info(users)').all().map(column => column.name);
+if (!userColumns.includes('club_name')) db.exec('ALTER TABLE users ADD COLUMN club_name TEXT');
+if (!userColumns.includes('club_name_key')) db.exec('ALTER TABLE users ADD COLUMN club_name_key TEXT');
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_club_name
+  ON users (guild_id, club_name_key)
+  WHERE club_name_key IS NOT NULL;
+`);
+
 module.exports = db;

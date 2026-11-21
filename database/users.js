@@ -2,24 +2,38 @@ const fs = require('node:fs');
 const path = require('node:path');
 const db = require('./db');
 const zonesConfig = require('../data/zones');
+const { clubNameKey } = require('../utils/clubName');
 
 const inProgress = new Set();
 const insertUser = db.prepare(`
-  INSERT OR IGNORE INTO users (guild_id, user_id, balance, last_collected_at, registered_at)
-  VALUES (?, ?, ?, ?, ?)
+  INSERT OR IGNORE INTO users (guild_id, user_id, balance, last_collected_at, registered_at, club_name, club_name_key)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
 `);
 const insertZone = db.prepare(`
   INSERT INTO user_zones (guild_id, user_id, zone_id, level)
   VALUES (?, ?, ?, ?)
 `);
 
-const createPlayerTransaction = db.transaction((guildId, userId, now) => {
+function isClubNameTaken(guildId, clubName, exceptUserId = '') {
+  const row = db.prepare(`
+    SELECT 1 FROM users
+    WHERE guild_id = ? AND club_name_key = ? AND user_id != ?
+  `).get(guildId, clubNameKey(clubName), exceptUserId);
+  return Boolean(row);
+}
+
+// Повертає true (створено), false (гравець уже є) або 'name-taken'
+const createPlayerTransaction = db.transaction((guildId, userId, now, clubName) => {
+  if (clubName && isClubNameTaken(guildId, clubName)) return 'name-taken';
+
   const result = insertUser.run(
     guildId,
     userId,
     zonesConfig.startingBalance,
     now,
     now,
+    clubName ?? null,
+    clubName ? clubNameKey(clubName) : null,
   );
   if (result.changes === 0) return false;
 
@@ -29,13 +43,23 @@ const createPlayerTransaction = db.transaction((guildId, userId, now) => {
   return true;
 });
 
-function createPlayer(guildId, userId, now = Date.now()) {
-  return createPlayerTransaction(guildId, userId, now);
+function createPlayer(guildId, userId, now = Date.now(), clubName = null) {
+  return createPlayerTransaction(guildId, userId, now, clubName);
+}
+
+function setClubName(guildId, userId, clubName) {
+  if (isClubNameTaken(guildId, clubName, userId)) return { status: 'name-taken' };
+
+  const result = db.prepare(`
+    UPDATE users SET club_name = ?, club_name_key = ?
+    WHERE guild_id = ? AND user_id = ?
+  `).run(clubName, clubNameKey(clubName), guildId, userId);
+  return { status: result.changes > 0 ? 'ok' : 'not-registered' };
 }
 
 function getPlayer(guildId, userId) {
   const user = db.prepare(`
-    SELECT guild_id AS guildId, user_id AS userId, balance,
+    SELECT guild_id AS guildId, user_id AS userId, balance, club_name AS clubName,
            last_collected_at AS lastCollectedAt, registered_at AS registeredAt
     FROM users
     WHERE guild_id = ? AND user_id = ?
@@ -53,7 +77,7 @@ function getPlayer(guildId, userId) {
   return { ...user, zones };
 }
 
-async function runStartOnce(guildId, userId, operation) {
+async function runStartOnce(guildId, userId, operation, clubName = null) {
   const claimKey = `${guildId}:${userId}`;
   if (getPlayer(guildId, userId)) return { status: 'already-used' };
   if (inProgress.has(claimKey)) return { status: 'in-progress' };
@@ -63,7 +87,9 @@ async function runStartOnce(guildId, userId, operation) {
     const result = await operation();
     if (!result.completed) return { status: 'not-completed', result };
 
-    if (!createPlayer(guildId, userId)) return { status: 'already-used' };
+    const created = createPlayer(guildId, userId, Date.now(), clubName);
+    if (created === 'name-taken') return { status: 'name-taken' };
+    if (!created) return { status: 'already-used' };
     return { status: 'completed', result };
   } finally {
     inProgress.delete(claimKey);
@@ -176,4 +202,12 @@ function migrateLegacyClaims() {
 
 migrateLegacyClaims();
 
-module.exports = { collectIncome, getPlayer, runStartOnce, upgradeZone };
+module.exports = {
+  collectIncome,
+  createPlayer,
+  getPlayer,
+  isClubNameTaken,
+  runStartOnce,
+  setClubName,
+  upgradeZone,
+};

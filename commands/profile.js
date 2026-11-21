@@ -32,7 +32,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0x00eeff)
-      .setTitle(`🏰 Клуб ${interaction.user.username}`)
+      .setTitle(`🏰 ${player.clubName ?? `Клуб ${interaction.user.username}`}`)
       .setThumbnail(interaction.user.displayAvatarURL())
       .addFields(
         { name: '💵 Баланс', value: formatMoney(player.balance), inline: true },
@@ -50,6 +50,10 @@ module.exports = {
         },
       )
       .setFooter({ text: 'Gay Tycoon' });
+
+    if (!player.clubName) {
+      embed.setDescription('У клуба ще немає назви. Задай її командою `/rename`.');
+    }
 
     await interaction.editReply({ embeds: [embed] });
   },
