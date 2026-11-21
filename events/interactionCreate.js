@@ -24,8 +24,33 @@ module.exports = {
       return;
     }
 
+    if (interaction.isButton() && interaction.customId.startsWith('start-image:')) {
+      const command = interaction.client.commands.get('start');
+      if (!command) return;
+
+      try {
+        await command.handleImageChoice(interaction);
+      } catch (error) {
+        console.error('❌ Помилка вибору зображення клубу:', error);
+        const response = {
+          content: 'Не вдалося вибрати зображення клубу. Запусти `/start` ще раз.',
+          flags: MessageFlags.Ephemeral,
+        };
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp(response);
+        } else {
+          await interaction.reply(response);
+        }
+      }
+      return;
+    }
+
     if (interaction.isModalSubmit()) {
-      const command = interaction.client.commands.find(candidate => candidate.modalId === interaction.customId);
+      const command = interaction.client.commands.find(candidate =>
+        candidate.modalId === interaction.customId ||
+        (Array.isArray(candidate.modalIds) && candidate.modalIds.includes(interaction.customId)) ||
+        (candidate.modalPrefix && interaction.customId.startsWith(candidate.modalPrefix))
+      );
       if (!command) return;
 
       try {

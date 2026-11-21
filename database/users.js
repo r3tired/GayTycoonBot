@@ -6,8 +6,11 @@ const { clubNameKey } = require('../utils/clubName');
 
 const inProgress = new Set();
 const insertUser = db.prepare(`
-  INSERT OR IGNORE INTO users (guild_id, user_id, balance, last_collected_at, registered_at, club_name, club_name_key)
-  VALUES (?, ?, ?, ?, ?, ?, ?)
+  INSERT OR IGNORE INTO users (
+    guild_id, user_id, balance, last_collected_at, registered_at, club_name, club_name_key,
+    club_image_source, club_image_filename
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 const insertZone = db.prepare(`
   INSERT INTO user_zones (guild_id, user_id, zone_id, level)
@@ -23,7 +26,7 @@ function isClubNameTaken(guildId, clubName, exceptUserId = '') {
 }
 
 // Повертає true (створено), false (гравець уже є) або 'name-taken'
-const createPlayerTransaction = db.transaction((guildId, userId, now, clubName) => {
+const createPlayerTransaction = db.transaction((guildId, userId, now, clubName, clubImageSource, clubImageFilename) => {
   if (clubName && isClubNameTaken(guildId, clubName)) return 'name-taken';
 
   const result = insertUser.run(
@@ -34,6 +37,8 @@ const createPlayerTransaction = db.transaction((guildId, userId, now, clubName) 
     now,
     clubName ?? null,
     clubName ? clubNameKey(clubName) : null,
+    clubImageSource,
+    clubImageFilename,
   );
   if (result.changes === 0) return false;
 
@@ -43,8 +48,15 @@ const createPlayerTransaction = db.transaction((guildId, userId, now, clubName) 
   return true;
 });
 
-function createPlayer(guildId, userId, now = Date.now(), clubName = null) {
-  return createPlayerTransaction(guildId, userId, now, clubName);
+function createPlayer(
+  guildId,
+  userId,
+  now = Date.now(),
+  clubName = null,
+  clubImageSource = 'profile',
+  clubImageFilename = null,
+) {
+  return createPlayerTransaction(guildId, userId, now, clubName, clubImageSource, clubImageFilename);
 }
 
 function setClubName(guildId, userId, clubName) {
@@ -60,6 +72,7 @@ function setClubName(guildId, userId, clubName) {
 function getPlayer(guildId, userId) {
   const user = db.prepare(`
     SELECT guild_id AS guildId, user_id AS userId, balance, club_name AS clubName,
+           club_image_source AS clubImageSource, club_image_filename AS clubImageFilename,
            regular_guests AS regularGuests, medium_guests AS mediumGuests,
            rich_guests AS richGuests,
            last_collected_at AS lastCollectedAt, registered_at AS registeredAt
@@ -79,7 +92,14 @@ function getPlayer(guildId, userId) {
   return { ...user, zones };
 }
 
-async function runStartOnce(guildId, userId, operation, clubName = null) {
+async function runStartOnce(
+  guildId,
+  userId,
+  operation,
+  clubName = null,
+  clubImageSource = 'profile',
+  clubImageFilename = null,
+) {
   const claimKey = `${guildId}:${userId}`;
   if (getPlayer(guildId, userId)) return { status: 'already-used' };
   if (inProgress.has(claimKey)) return { status: 'in-progress' };
@@ -89,7 +109,14 @@ async function runStartOnce(guildId, userId, operation, clubName = null) {
     const result = await operation();
     if (!result.completed) return { status: 'not-completed', result };
 
-    const created = createPlayer(guildId, userId, Date.now(), clubName);
+    const created = createPlayer(
+      guildId,
+      userId,
+      Date.now(),
+      clubName,
+      clubImageSource,
+      clubImageFilename,
+    );
     if (created === 'name-taken') return { status: 'name-taken' };
     if (!created) return { status: 'already-used' };
     return { status: 'completed', result };

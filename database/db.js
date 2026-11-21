@@ -16,6 +16,8 @@ db.exec(`
     regular_guests INTEGER NOT NULL DEFAULT 0 CHECK (regular_guests >= 0),
     medium_guests INTEGER NOT NULL DEFAULT 0 CHECK (medium_guests >= 0),
     rich_guests INTEGER NOT NULL DEFAULT 0 CHECK (rich_guests >= 0),
+    club_image_source TEXT NOT NULL DEFAULT 'profile' CHECK (club_image_source IN ('profile', 'upload')),
+    club_image_filename TEXT,
     PRIMARY KEY (guild_id, user_id)
   );
 
@@ -40,6 +42,12 @@ if (!userColumns.includes('medium_guests')) {
 }
 if (!userColumns.includes('rich_guests')) {
   db.exec('ALTER TABLE users ADD COLUMN rich_guests INTEGER NOT NULL DEFAULT 0 CHECK (rich_guests >= 0)');
+}
+if (!userColumns.includes('club_image_source')) {
+  db.exec(`ALTER TABLE users ADD COLUMN club_image_source TEXT NOT NULL DEFAULT 'profile' CHECK (club_image_source IN ('profile', 'upload'))`);
+}
+if (!userColumns.includes('club_image_filename')) {
+  db.exec('ALTER TABLE users ADD COLUMN club_image_filename TEXT');
 }
 if (!userColumns.includes('club_name')) db.exec('ALTER TABLE users ADD COLUMN club_name TEXT');
 if (!userColumns.includes('club_name_key')) db.exec('ALTER TABLE users ADD COLUMN club_name_key TEXT');

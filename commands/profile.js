@@ -1,9 +1,12 @@
-const { EmbedBuilder, MessageFlags, SlashCommandBuilder } = require('discord.js');
+const fs = require('node:fs');
+const path = require('node:path');
+const { AttachmentBuilder, EmbedBuilder, MessageFlags, SlashCommandBuilder } = require('discord.js');
 const economy = require('../services/economyService');
 const { syncZoneRoles } = require('../services/roleSync');
 const zonesConfig = require('../data/zones');
 const formatMoney = require('../utils/formatMoney');
 const formatCount = require('../utils/formatCount');
+const { getClubImagePath } = require('../utils/clubImage');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -31,10 +34,26 @@ module.exports = {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     await syncZoneRoles(interaction.member, player.zones);
 
+    let imageAttachment;
+    let imageMissing = false;
+    if (player.clubImageSource === 'upload' && player.clubImageFilename) {
+      const imagePath = getClubImagePath(player.clubImageFilename);
+      if (fs.existsSync(imagePath)) {
+        const filename = path.basename(imagePath);
+        imageAttachment = new AttachmentBuilder(imagePath, { name: filename });
+      } else {
+        imageMissing = true;
+      }
+    }
+
     const embed = new EmbedBuilder()
       .setColor(0x00eeff)
       .setTitle(`🏰 ${player.clubName ?? `Клуб ${interaction.user.username}`}`)
-      .setThumbnail(interaction.user.displayAvatarURL())
+      .setThumbnail(
+        imageAttachment
+          ? `attachment://${imageAttachment.name}`
+          : interaction.user.displayAvatarURL(),
+      )
       .addFields(
         { name: '💵 Баланс', value: formatMoney(player.balance), inline: true },
         {
@@ -61,10 +80,15 @@ module.exports = {
       )
       .setFooter({ text: 'Gay Tycoon' });
 
-    if (!player.clubName) {
-      embed.setDescription('У клуба ще немає назви. Задай її командою `/rename`.');
+    const notices = [];
+    if (!player.clubName) notices.push('У клуба ще немає назви. Задай її командою `/rename`.');
+    if (imageMissing) {
+      notices.push('Зображення клубу не знайдено; показано аватар профілю замість нього.');
     }
+    if (notices.length > 0) embed.setDescription(notices.join('\n'));
 
-    await interaction.editReply({ embeds: [embed] });
+    const response = { embeds: [embed] };
+    if (imageAttachment) response.files = [imageAttachment];
+    await interaction.editReply(response);
   },
 };

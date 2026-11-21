@@ -5,7 +5,7 @@ const users = require('../database/users');
 const { validateClubName } = require('../utils/clubName');
 
 test('validateClubName перевіряє довжину, символи й посилання', () => {
-  assert.deepEqual(validateClubName('  Рожевий   Єдиноріг '), { ok: true, name: 'Рожевий Єдиноріг' });
+  assert.deepEqual(validateClubName('  Рожевий   Єдиноріг '), { ok: true, name: 'Гей Клуб Поковба' });
   assert.equal(validateClubName('ab').ok, false);
   assert.equal(validateClubName('x'.repeat(33)).ok, false);
   assert.equal(validateClubName('Клуб @everyone').ok, false);
